@@ -1,5 +1,6 @@
 {Range, Point, CompositeDisposable} = require('atom');
 path = require('path');
+MatchCountView = require('./match-count-view');
 
 
 regexPatternIn = (pattern, list) ->
@@ -141,6 +142,12 @@ PythonTools = {
     this.provider.kill()
     this.readline.close()
 
+    @matchCount?.destroy()
+    @matchCount = null
+
+    @statusBarTile?.destroy()
+    @statusBarTile = null
+
   selectAllString: () ->
     editor = atom.workspace.getActiveTextEditor()
     bufferPosition = editor.getCursorBufferPosition()
@@ -269,7 +276,6 @@ PythonTools = {
             ))
           name = item['name']
         editor.setSelectedBufferRanges(selections)
-        atom.notifications.addInfo(response['definitions'].length + " match(es) for " + name)
 
       else if response['type'] == 'gotoDef'
         first_def = response['definitions'][0]
@@ -322,6 +328,10 @@ PythonTools = {
         resolve()
       )
     )
+
+  consumeStatusBar: (statusBar) ->
+    @matchCount = new MatchCountView()
+    @statusBarTile = statusBar.addLeftTile(item: @matchCount.element, priority: 3)
 }
 
 module.exports = PythonTools
