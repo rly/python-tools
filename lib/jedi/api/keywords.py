@@ -1,87 +1,51 @@
 import pydoc
-import keyword
 
-from jedi._compatibility import is_py3
-from jedi import common
-from jedi.evaluate import compiled
-from jedi.evaluate.helpers import FakeName
-from jedi.parser.tree import Leaf
+from jedi.evaluate.utils import ignored
+from jedi.evaluate.filters import AbstractNameDefinition
+
 try:
     from pydoc_data import topics as pydoc_topics
 except ImportError:
-    # Python 2.6
-    import pydoc_topics
-
-if is_py3:
-    keys = keyword.kwlist
-else:
-    keys = keyword.kwlist + ['None', 'False', 'True']
-
-
-def has_inappropriate_leaf_keyword(pos, module):
-    relevant_errors = filter(
-        lambda error: error.first_pos[0] == pos[0],
-        module.error_statement_stacks)
-
-    for error in relevant_errors:
-        if error.next_token in keys:
-            return True
-
-    return False
-
-def completion_names(evaluator, stmt, pos, module):
-    keyword_list = all_keywords()
-
-    if not isinstance(stmt, Leaf) or has_inappropriate_leaf_keyword(pos, module):
-        keyword_list = filter(
-            lambda keyword: not keyword.only_valid_as_leaf,
-            keyword_list
-        )
-    return [keyword.name for keyword in keyword_list]
+    # Python 2
+    try:
+        import pydoc_topics
+    except ImportError:
+        # This is for Python 3 embeddable version, which dont have
+        # pydoc_data module in its file python3x.zip.
+        pydoc_topics = None
 
 
-def all_keywords(pos=(0,0)):
-    return set([Keyword(k, pos) for k in keys])
+def get_operator(evaluator, string, pos):
+    return Keyword(evaluator, string, pos)
 
 
-def keyword(string, pos=(0,0)):
-    if string in keys:
-        return Keyword(string, pos)
-    else:
-        return None
+class KeywordName(AbstractNameDefinition):
+    api_type = u'keyword'
 
+    def __init__(self, evaluator, name):
+        self.evaluator = evaluator
+        self.string_name = name
+        self.parent_context = evaluator.builtins_module
 
-def get_operator(string, pos):
-    return Keyword(string, pos)
-
-
-keywords_only_valid_as_leaf = (
-    'continue',
-    'break',
-)
+    def infer(self):
+        return [Keyword(self.evaluator, self.string_name, (0, 0))]
 
 
 class Keyword(object):
-    def __init__(self, name, pos):
-        self.name = FakeName(name, self, pos)
+    api_type = u'keyword'
+
+    def __init__(self, evaluator, name, pos):
+        self.name = KeywordName(evaluator, name)
         self.start_pos = pos
-        self.parent = compiled.builtin
-
-    def get_parent_until(self):
-        return self.parent
-
-    @property
-    def only_valid_as_leaf(self):
-        return self.name.value in keywords_only_valid_as_leaf
+        self.parent = evaluator.builtins_module
 
     @property
     def names(self):
         """ For a `parsing.Name` like comparision """
         return [self.name]
 
-    @property
-    def docstr(self):
-        return imitate_pydoc(self.name)
+    def py__doc__(self, include_call_signature=False):
+        return imitate_pydoc(self.name.string_name)
 
     def __repr__(self):
         return '<%s: %s>' % (type(self).__name__, self.name)
@@ -92,11 +56,14 @@ def imitate_pydoc(string):
     It's not possible to get the pydoc's without starting the annoying pager
     stuff.
     """
+    if pydoc_topics is None:
+        return ''
+
     # str needed because of possible unicode stuff in py2k (pydoc doesn't work
     # with unicode strings)
     string = str(string)
     h = pydoc.help
-    with common.ignored(KeyError):
+    with ignored(KeyError):
         # try to access symbols
         string = h.symbols[string]
         string, _, related = string.partition(' ')
@@ -112,6 +79,6 @@ def imitate_pydoc(string):
         return ''
 
     try:
-        return pydoc_topics.topics[label] if pydoc_topics else ''
+        return pydoc_topics.topics[label].strip() if pydoc_topics else ''
     except KeyError:
         return ''
