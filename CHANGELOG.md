@@ -1,3 +1,7 @@
+0.6.x
+-----
+* (Fork from rly) Update jedi copy to 0.13.3, which resolves several issues. Change find and select usages behavior to work only on current file
+
 0.6.8
 -----
 * Fix Issue #36 - python-tools unable to find python executable on Windows Machine

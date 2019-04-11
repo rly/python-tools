@@ -60,3 +60,6 @@ def usages(module_context, tree_name):
                 for name in new:
                     non_matching_usage_maps.setdefault(name, []).append(new)
     return found_names.values()
+
+def usages_in_module(module_context, tree_name):
+    return _find_names(module_context, tree_name).values()

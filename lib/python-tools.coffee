@@ -260,14 +260,16 @@ PythonTools = {
       if response['type'] == 'usages'
         path = editor.getPath()
         selections = []
+        name = ''
         for item in response['definitions']
           if item['path'] == path
             selections.push(new Range(
               new Point(item['line'] - 1, item['col']),
               new Point(item['line'] - 1, item['col'] + item['name'].length),  # Use string length
             ))
-
+          name = item['name']
         editor.setSelectedBufferRanges(selections)
+        atom.notifications.addInfo(response['definitions'].length + " match(es) for " + name)
 
       else if response['type'] == 'gotoDef'
         first_def = response['definitions'][0]

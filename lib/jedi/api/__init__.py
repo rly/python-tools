@@ -309,6 +309,39 @@ class Script(object):
             return helpers.sorted_definitions(definitions)
         return _usages(**kwargs)
 
+    def usages_in_module(self, additional_module_paths=(), **kwargs):
+        """
+        Return :class:`classes.Definition` objects, which contain all
+        names that point to the definition of the name under the cursor. This
+        is very useful for refactoring (renaming), or to show all usages of a
+        variable.
+
+        .. todo:: Implement additional_module_paths
+
+        :param additional_module_paths: Deprecated, never ever worked.
+        :param include_builtins: Default True, checks if a usage is a builtin
+            (e.g. ``sys``) and in that case does not return it.
+        :rtype: list of :class:`classes.Definition`
+        """
+        if additional_module_paths:
+            warnings.warn(
+                "Deprecated since version 0.12.0. This never even worked, just ignore it.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+
+        def _usages_in_module(include_builtins=True):
+            tree_name = self._module_node.get_name_of_position(self._pos)
+            if tree_name is None:
+                # Must be syntax
+                return []
+            names = usages.usages_in_module(self._get_module(), tree_name)
+            definitions = [classes.Definition(self._evaluator, n) for n in names]
+            if not include_builtins:
+                definitions = [d for d in definitions if not d.in_builtin_module()]
+            return helpers.sorted_definitions(definitions)
+        return _usages_in_module(**kwargs)
+
     def call_signatures(self):
         """
         Return the function object of the call you're currently in.

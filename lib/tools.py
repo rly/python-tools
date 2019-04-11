@@ -54,7 +54,7 @@ class JediTools(object):
         if path not in sys.path:
             sys.path.insert(0, path)
 
-        script = jedi.api.Script(
+        script = jedi.Script(
             source=request['source'],
             line=request['line'] + 1,
             column=request['col'],
@@ -62,7 +62,7 @@ class JediTools(object):
         )
 
         if request['type'] == 'usages':
-            self._write_response(self._serialize('usages', script.usages()))
+            self._write_response(self._serialize('usages', script.usages_in_module()))
         elif request['type'] == 'gotoDef':
             self._write_response(self._serialize('gotoDef', script.goto_definitions()))
         else:
@@ -83,6 +83,7 @@ class JediTools(object):
 
                 self._process_request(data)
             except Exception as e:
+                # pretty sure this error logging doesn't work...
                 with open('error.log', 'wa') as fp:
                     traceback.print_exc(file=fp)
                     fp.write('Input:\n{}\n'.format(data))
